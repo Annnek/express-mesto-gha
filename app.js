@@ -10,11 +10,20 @@ const { PORT = 3000 } = process.env;
 
 const app = express();
 
-mongoose.connect("mongodb://localhost:27017/mestodb");
+mongoose.connect("mongodb://127.0.0.1:27017/mestodb");
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(router);
+
+app.use((req, res, next) => {
+  req.user = {
+    _id: "64543c45285aaec4cc658fdd", // вставьте сюда _id созданного в предыдущем пункте пользователя
+  };
+
+  next();
+});
 
 app.listen(PORT, () => {
   // Если всё работает, консоль покажет, какой порт приложение слушает
