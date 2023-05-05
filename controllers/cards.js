@@ -18,7 +18,7 @@ const createCard = (req, res) => {
     return res.status(400).send({ message: "Invalid data" });
   }
 
-  Card.create({ name, link, owner: ownerId })
+  return Card.create({ name, link, owner: ownerId })
     .then((card) => res.send(card))
     .catch((err) => {
       console.error(err);
@@ -44,13 +44,13 @@ const addLikeToCard = (req, res) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $addToSet: { likes: req.user._id } },
-    { new: true }
+    { new: true },
   )
     .then((card) => {
       if (!card) {
-        throw new NotFoundError("Карточка не найдена");
+        return res.status(404).send({ message: "Карточка не найдена" });
       }
-      res.send(card);
+      return res.send(card);
     })
     .catch((err) => {
       console.error(err);
@@ -62,13 +62,13 @@ const dislikeCard = (req, res) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $pull: { likes: req.user._id } },
-    { new: true }
+    { new: true },
   )
     .then((card) => {
       if (!card) {
-        throw new NotFoundError("Карточка не найдена");
+        return res.status(404).send({ message: "Карточка не найдена" });
       }
-      res.send(card);
+      return res.send(card);
     })
     .catch((err) => {
       console.error(err);

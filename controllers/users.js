@@ -17,8 +17,7 @@ const getUserById = (req, res) => {
       if (!user) {
         return res.status(404).send({ message: "User is not found" });
       }
-      const { name, about, avatar, _id } = user;
-      return res.send({ name, about, avatar, _id });
+      return res.send(user);
     })
     .catch((err) => {
       console.error(err);
@@ -45,7 +44,7 @@ const updateProfile = (req, res) => {
   User.findByIdAndUpdate(
     userId,
     { name, about },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   )
     .then((user) => {
       if (!user) {
