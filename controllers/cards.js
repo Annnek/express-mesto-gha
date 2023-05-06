@@ -14,14 +14,10 @@ const createCard = (req, res) => {
   const ownerId = req.user._id;
   console.log(req.user._id); // _id станет доступен
 
-  if (!name || !link) {
-    return res.status(400).send({ message: "Invalid data" });
-  }
-
-  return Card.create({ name, link, owner: ownerId })
+  Card.create({ name, link, owner: ownerId })
     .then((card) => res.status(200).send(card))
     .catch((err) => {
-      if (err.name === "CastError") {
+      if (err.name === "CastError" || err.name === "ValidationError") {
         return res.status(400).send({
           message: "Переданы некорректные данные при создании карточки",
         });
@@ -57,15 +53,13 @@ const addLikeToCard = (req, res) => {
     { new: true },
   )
     .orFail()
-    .then((card) => {
-      if (!card) {
+    .then((card) => res.status(200).send(card))
+    .catch((err) => {
+      if (err.name === "DocumentNotFoundError") {
         return res
           .status(404)
-          .send({ message: "Карточка с данным id не найдена" });
+          .send({ message: "Карточка c указанным id не найдена" });
       }
-      return res.status(200).send(card);
-    })
-    .catch((err) => {
       if (err.name === "CastError") {
         return res.status(400).send({
           message: "Переданы неправильные данные для лайка.",
@@ -83,15 +77,13 @@ const dislikeCard = (req, res) => {
     { new: true },
   )
     .orFail()
-    .then((card) => {
-      if (!card) {
+    .then((card) => res.status(200).send(card))
+    .catch((err) => {
+      if (err.name === "DocumentNotFoundError") {
         return res
           .status(404)
-          .send({ message: "Карточка с данным id не найдена" });
+          .send({ message: "Карточка c указанным id не найдена" });
       }
-      return res.status(200).send(card);
-    })
-    .catch((err) => {
       if (err.name === "CastError") {
         return res.status(400).send({
           message: "Переданы неправильные данные для удаления лайка.",
