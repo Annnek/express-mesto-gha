@@ -13,15 +13,22 @@ const getUsers = (req, res) => {
 const getUserById = (req, res) => {
   const { userId } = req.params;
   User.findById(userId)
-    .then((user) => {
-      if (!user) {
-        return res.status(404).send({ message: "User is not found" });
-      }
-      return res.send(user);
-    })
+    .orFail()
+    .then((user) => res.status(200).send(user))
     .catch((err) => {
-      console.error(err);
-      res.status(500).send({ message: "Server error" });
+      if (err.name === "CastError") {
+        return res.status(400).send({
+          message: "Переданы некорректные данные пользователя при поиске по id",
+        });
+      }
+
+      if (err.name === "DocumentNotFoundError") {
+        return res.status(404).send({
+          message: "Не найден пользователь с данным id",
+        });
+      }
+
+      return res.status(500).send({ message: "Server error" });
     });
 };
 
@@ -51,17 +58,16 @@ const updateProfile = (req, res) => {
     { name, about },
     { new: true, runValidators: true },
   )
-    .then((user) => {
-      if (!user) {
-        return res.status(404).send({ message: "Пользователь не найден" });
-      }
-      return res.status(200).send(user);
-    })
+    .orFail()
+    .then((user) => res.status(200).send(user))
     .catch((err) => {
       if (err.name === "ValidationError") {
         return res
           .status(400)
           .send({ message: "Переданы некорректные данные" });
+      }
+      if (err.name === "DocumentNotFoundError") {
+        return res.status(404).send({ message: "Пользователь не найден" });
       }
       console.error(err);
       return res.status(500).send({ message: "Server error" });
@@ -73,15 +79,19 @@ const updateAvatar = (req, res) => {
   const userId = req.user._id;
   const { avatar } = req.body;
   User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true })
-    .then((user) => {
-      if (!user) {
+    .orFail()
+    .then((user) => res.status(200).send(user))
+    .catch((err) => {
+      if (err.name === "ValidationError") {
+        return res
+          .status(400)
+          .send({ message: "Переданы некорректные данные" });
+      }
+      if (err.name === "DocumentNotFoundError") {
         return res.status(404).send({ message: "Пользователь не найден" });
       }
-      return res.send(user);
-    })
-    .catch((err) => {
       console.error(err);
-      res.status(500).send({ message: "Server error" });
+      return res.status(500).send({ message: "Server error" });
     });
 };
 
