@@ -3,7 +3,7 @@ const User = require("../models/user");
 // Контроллер для получения списка юзеров
 const getUsers = (req, res) => {
   User.find({})
-    .then((users) => res.send(users))
+    .then((users) => res.status(200).send(users))
     .catch((err) => {
       console.error(err);
       res.status(500).send({ message: "Server error" });
@@ -24,7 +24,7 @@ const getUserById = (req, res) => {
 
       if (err.name === "DocumentNotFoundError") {
         return res.status(404).send({
-          message: "Не найден пользователь с данным id",
+          message: "Пользователь с данным id не найден",
         });
       }
 

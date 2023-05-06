@@ -2,7 +2,7 @@ const Card = require("../models/card");
 
 const getCards = (req, res) => {
   Card.find({})
-    .then((cards) => res.send(cards))
+    .then((cards) => res.status(200).send(cards))
     .catch((err) => {
       console.error(err);
       res.status(500).send({ message: "Server error" });
@@ -19,10 +19,15 @@ const createCard = (req, res) => {
   }
 
   return Card.create({ name, link, owner: ownerId })
-    .then((card) => res.send(card))
+    .then((card) => res.status(200).send(card))
     .catch((err) => {
+      if (err.name === "CastError") {
+        return res.status(400).send({
+          message: "Переданы некорректные данные при создании карточки",
+        });
+      }
       console.error(err);
-      res.status(500).send({ message: "Server error" });
+      return res.status(500).send({ message: "Server error" });
     });
 };
 
@@ -32,11 +37,16 @@ const deleteCard = (req, res) => {
       if (!card) {
         return res.status(404).send({ message: "Карточка не найдена" });
       }
-      return res.send(card);
+      return res.status(200).send(card);
     })
     .catch((err) => {
+      if (err.name === "CastError") {
+        return res.status(400).send({
+          message: "Переданы некорректные данные при удалении карточки",
+        });
+      }
       console.error(err);
-      res.status(500).send({ message: "Server error" });
+      return res.status(500).send({ message: "Server error" });
     });
 };
 
@@ -46,15 +56,23 @@ const addLikeToCard = (req, res) => {
     { $addToSet: { likes: req.user._id } },
     { new: true },
   )
+    .orFail()
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ message: "Карточка не найдена" });
+        return res
+          .status(404)
+          .send({ message: "Карточка с данным id не найдена" });
       }
-      return res.send(card);
+      return res.status(200).send(card);
     })
     .catch((err) => {
+      if (err.name === "CastError") {
+        return res.status(400).send({
+          message: "Переданы неправильные данные для лайка.",
+        });
+      }
       console.error(err);
-      res.status(500).send({ message: "Server error" });
+      return res.status(500).send({ message: "Server error" });
     });
 };
 
@@ -64,15 +82,23 @@ const dislikeCard = (req, res) => {
     { $pull: { likes: req.user._id } },
     { new: true },
   )
+    .orFail()
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ message: "Карточка не найдена" });
+        return res
+          .status(404)
+          .send({ message: "Карточка с данным id не найдена" });
       }
-      return res.send(card);
+      return res.status(200).send(card);
     })
     .catch((err) => {
+      if (err.name === "CastError") {
+        return res.status(400).send({
+          message: "Переданы неправильные данные для удаления лайка.",
+        });
+      }
       console.error(err);
-      res.status(500).send({ message: "Server error" });
+      return res.status(500).send({ message: "Server error" });
     });
 };
 
