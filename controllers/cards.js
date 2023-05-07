@@ -17,7 +17,7 @@ const createCard = (req, res) => {
   Card.create({ name, link, owner: ownerId })
     .then((card) => res.status(200).send(card))
     .catch((err) => {
-      if (err.name === "CastError" || err.name === "ValidationError") {
+      if (err.name === "ValidationError") {
         return res.status(400).send({
           message: "Переданы некорректные данные при создании карточки",
         });

@@ -1,7 +1,5 @@
 const express = require("express");
 
-const path = require("path");
-
 const mongoose = require("mongoose");
 
 const routes = require("./routes");
@@ -10,7 +8,6 @@ const { PORT = 3000 } = process.env;
 
 const app = express();
 
-app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
