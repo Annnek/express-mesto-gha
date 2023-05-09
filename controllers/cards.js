@@ -1,11 +1,14 @@
 const Card = require("../models/card");
+const { HTTP_STATUS_CODE, ERROR_MESSAGE } = require("../utils/constants");
 
 const getCards = (req, res) => {
   Card.find({})
-    .then((cards) => res.status(200).send(cards))
+    .then((cards) => res.status(HTTP_STATUS_CODE.OK).send(cards))
     .catch((err) => {
       console.error(err);
-      res.status(500).send({ message: "Server error" });
+      res
+        .status(HTTP_STATUS_CODE.SERVER_ERROR)
+        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
     });
 };
 
@@ -15,15 +18,17 @@ const createCard = (req, res) => {
   console.log(req.user._id); // _id станет доступен
 
   Card.create({ name, link, owner: ownerId })
-    .then((card) => res.status(200).send(card))
+    .then((card) => res.status(HTTP_STATUS_CODE.OK).send(card))
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(400).send({
-          message: "Переданы некорректные данные при создании карточки",
+        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+          message: `${ERROR_MESSAGE.BAD_REQUEST}  при создании карточки`,
         });
       }
       console.error(err);
-      return res.status(500).send({ message: "Server error" });
+      return res
+        .status(HTTP_STATUS_CODE.SERVER_ERROR)
+        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
     });
 };
 
@@ -31,18 +36,22 @@ const deleteCard = (req, res) => {
   Card.findByIdAndRemove(req.params.cardId)
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ message: "Карточка не найдена" });
+        return res
+          .status(HTTP_STATUS_CODE.NOT_FOUND)
+          .send({ message: `${ERROR_MESSAGE.NOT_FOUND} карточка не найдена` });
       }
-      return res.status(200).send(card);
+      return res.status(HTTP_STATUS_CODE.OK).send(card);
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        return res.status(400).send({
-          message: "Переданы некорректные данные при удалении карточки",
+        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+          message: `${ERROR_MESSAGE.BAD_REQUEST}  при удалении карточки`,
         });
       }
       console.error(err);
-      return res.status(500).send({ message: "Server error" });
+      return res
+        .status(HTTP_STATUS_CODE.SERVER_ERROR)
+        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
     });
 };
 
@@ -53,20 +62,22 @@ const addLikeToCard = (req, res) => {
     { new: true },
   )
     .orFail()
-    .then((card) => res.status(200).send(card))
+    .then((card) => res.status(HTTP_STATUS_CODE.OK).send(card))
     .catch((err) => {
       if (err.name === "DocumentNotFoundError") {
-        return res
-          .status(404)
-          .send({ message: "Карточка c указанным id не найдена" });
+        return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
+          message: `${ERROR_MESSAGE.NOT_FOUND} Карточка c указанным id не найдена`,
+        });
       }
       if (err.name === "CastError") {
-        return res.status(400).send({
-          message: "Переданы неправильные данные для лайка.",
+        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+          message: `${ERROR_MESSAGE.BAD_REQUEST}  для лайка`,
         });
       }
       console.error(err);
-      return res.status(500).send({ message: "Server error" });
+      return res
+        .status(HTTP_STATUS_CODE.SERVER_ERROR)
+        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
     });
 };
 
@@ -77,20 +88,22 @@ const dislikeCard = (req, res) => {
     { new: true },
   )
     .orFail()
-    .then((card) => res.status(200).send(card))
+    .then((card) => res.status(HTTP_STATUS_CODE.OK).send(card))
     .catch((err) => {
       if (err.name === "DocumentNotFoundError") {
-        return res
-          .status(404)
-          .send({ message: "Карточка c указанным id не найдена" });
+        return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
+          message: `${ERROR_MESSAGE.NOT_FOUND} карточка c указанным id не найдена`,
+        });
       }
       if (err.name === "CastError") {
-        return res.status(400).send({
-          message: "Переданы неправильные данные для удаления лайка.",
+        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+          message: `${ERROR_MESSAGE.BAD_REQUEST}  для удаления лайка`,
         });
       }
       console.error(err);
-      return res.status(500).send({ message: "Server error" });
+      return res
+        .status(HTTP_STATUS_CODE.SERVER_ERROR)
+        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
     });
 };
 
