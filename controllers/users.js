@@ -4,9 +4,8 @@ const { HTTP_STATUS_CODE, ERROR_MESSAGE } = require("../utils/constants");
 // Контроллер для получения списка юзеров
 const getUsers = (req, res) => {
   User.find({})
-    .then((users) => res.status(HTTP_STATUS_CODE.OK).send(users))
-    .catch((err) => {
-      console.error(err);
+    .then((users) => res.status(HTTP_STATUS_CODE.SUCCESS).send(users))
+    .catch(() => {
       res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
@@ -17,20 +16,18 @@ const getUserById = (req, res) => {
   const { userId } = req.params;
   User.findById(userId)
     .orFail()
-    .then((user) => res.status(HTTP_STATUS_CODE.OK).send(user))
+    .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
     .catch((err) => {
       if (err.name === "CastError") {
         return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
           message: `${ERROR_MESSAGE.BAD_REQUEST}  пользователя при поиске по id`,
         });
       }
-
       if (err.name === "DocumentNotFoundError") {
         return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
           message: `${ERROR_MESSAGE.NOT_FOUND} пользователь с данным id`,
         });
       }
-
       return res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
@@ -42,14 +39,13 @@ const createUser = (req, res) => {
   const { name, about, avatar } = req.body;
   console.log(req.body);
   User.create({ name, about, avatar })
-    .then((user) => res.status(HTTP_STATUS_CODE.OK).send(user))
+    .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS_CREATED).send(user))
     .catch((err) => {
       if (err.name === "ValidationError") {
         return res
           .status(HTTP_STATUS_CODE.BAD_REQUEST)
           .send({ message: `${ERROR_MESSAGE.BAD_REQUEST} пользователя` });
       }
-      console.error(err);
       return res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
@@ -66,7 +62,7 @@ const updateProfile = (req, res) => {
     { new: true, runValidators: true },
   )
     .orFail()
-    .then((user) => res.status(HTTP_STATUS_CODE.OK).send(user))
+    .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
     .catch((err) => {
       if (err.name === "ValidationError") {
         return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
@@ -78,7 +74,6 @@ const updateProfile = (req, res) => {
           message: `${ERROR_MESSAGE.NOT_FOUND} пользователь не найден`,
         });
       }
-      console.error(err);
       return res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
@@ -91,7 +86,7 @@ const updateAvatar = (req, res) => {
   const { avatar } = req.body;
   User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true })
     .orFail()
-    .then((user) => res.status(HTTP_STATUS_CODE.OK).send(user))
+    .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
     .catch((err) => {
       if (err.name === "ValidationError") {
         return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
@@ -103,7 +98,7 @@ const updateAvatar = (req, res) => {
           message: `${ERROR_MESSAGE.NOT_FOUND} пользователь не найден`,
         });
       }
-      console.error(err);
+
       return res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });

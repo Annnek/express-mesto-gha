@@ -4,8 +4,7 @@ const { HTTP_STATUS_CODE, ERROR_MESSAGE } = require("../utils/constants");
 const getCards = (req, res) => {
   Card.find({})
     .then((cards) => res.status(HTTP_STATUS_CODE.OK).send(cards))
-    .catch((err) => {
-      console.error(err);
+    .catch(() => {
       res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
@@ -18,14 +17,14 @@ const createCard = (req, res) => {
   console.log(req.user._id); // _id станет доступен
 
   Card.create({ name, link, owner: ownerId })
-    .then((card) => res.status(HTTP_STATUS_CODE.OK).send(card))
+    .then((card) => res.status(HTTP_STATUS_CODE.SUCCESS_CREATED).send(card))
     .catch((err) => {
       if (err.name === "ValidationError") {
         return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
           message: `${ERROR_MESSAGE.BAD_REQUEST}  при создании карточки`,
         });
       }
-      console.error(err);
+
       return res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
@@ -48,7 +47,7 @@ const deleteCard = (req, res) => {
           message: `${ERROR_MESSAGE.BAD_REQUEST}  при удалении карточки`,
         });
       }
-      console.error(err);
+
       return res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
@@ -74,7 +73,7 @@ const addLikeToCard = (req, res) => {
           message: `${ERROR_MESSAGE.BAD_REQUEST}  для лайка`,
         });
       }
-      console.error(err);
+
       return res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
@@ -100,7 +99,7 @@ const dislikeCard = (req, res) => {
           message: `${ERROR_MESSAGE.BAD_REQUEST}  для удаления лайка`,
         });
       }
-      console.error(err);
+
       return res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
