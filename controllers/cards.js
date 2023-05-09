@@ -3,7 +3,7 @@ const { HTTP_STATUS_CODE, ERROR_MESSAGE } = require("../utils/constants");
 
 const getCards = (req, res) => {
   Card.find({})
-    .then((cards) => res.status(HTTP_STATUS_CODE.OK).send(cards))
+    .then((cards) => res.status(HTTP_STATUS_CODE.SUCCESS).send(cards))
     .catch(() => {
       res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
@@ -39,7 +39,7 @@ const deleteCard = (req, res) => {
           .status(HTTP_STATUS_CODE.NOT_FOUND)
           .send({ message: `${ERROR_MESSAGE.NOT_FOUND} карточка не найдена` });
       }
-      return res.status(HTTP_STATUS_CODE.OK).send(card);
+      return res.status(HTTP_STATUS_CODE.SUCCESS).send(card);
     })
     .catch((err) => {
       if (err.name === "CastError") {
@@ -61,7 +61,7 @@ const addLikeToCard = (req, res) => {
     { new: true },
   )
     .orFail()
-    .then((card) => res.status(HTTP_STATUS_CODE.OK).send(card))
+    .then((card) => res.status(HTTP_STATUS_CODE.SUCCESS).send(card))
     .catch((err) => {
       if (err.name === "DocumentNotFoundError") {
         return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
@@ -87,7 +87,7 @@ const dislikeCard = (req, res) => {
     { new: true },
   )
     .orFail()
-    .then((card) => res.status(HTTP_STATUS_CODE.OK).send(card))
+    .then((card) => res.status(HTTP_STATUS_CODE.SUCCESS).send(card))
     .catch((err) => {
       if (err.name === "DocumentNotFoundError") {
         return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
