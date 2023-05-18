@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 
 const routes = require("./routes");
 
+const { login, createUser } = require("./controllers/users");
+
 const { PORT = 3000 } = process.env;
 
 const app = express();
@@ -19,6 +21,8 @@ app.use((req, res, next) => {
 });
 
 app.use(routes);
+app.post("/signin", login);
+app.post("/signup", createUser);
 
 mongoose.connect("mongodb://127.0.0.1:27017/mestodb");
 

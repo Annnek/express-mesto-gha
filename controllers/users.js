@@ -1,3 +1,4 @@
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs"); // Добавляем модуль bcryptjs для хеширования пароля
 const User = require("../models/user");
 const { HTTP_STATUS_CODE, ERROR_MESSAGE } = require("../utils/constants");
@@ -128,10 +129,36 @@ const updateAvatar = (req, res) => {
     });
 };
 
+const login = (req, res) => {
+  const { email, password } = req.body;
+  return User.findUserByCredentials(email, password)
+    .then((user) => {
+      if (!user) {
+        return res
+          .status(HTTP_STATUS_CODE.UNAUTHORIZED)
+          .send({ message: ERROR_MESSAGE.UNAUTHORIZED });
+      }
+
+      const payload = {
+        _id: user._id,
+      };
+
+      const token = jwt.sign(payload, "JWT_SECRET", { expiresIn: "7d" });
+
+      return res.status(HTTP_STATUS_CODE.SUCCESS).send({ token });
+    })
+    .catch((err) => {
+      res
+        .status(HTTP_STATUS_CODE.SERVER_ERROR)
+        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+    });
+};
+
 module.exports = {
   getUsers,
   getUserById,
   createUser,
   updateProfile,
   updateAvatar,
+  login,
 };
