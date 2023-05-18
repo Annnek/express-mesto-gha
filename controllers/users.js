@@ -1,3 +1,4 @@
+const bcrypt = require("bcryptjs"); // Добавляем модуль bcryptjs для хеширования пароля
 const User = require("../models/user");
 const { HTTP_STATUS_CODE, ERROR_MESSAGE } = require("../utils/constants");
 
@@ -36,20 +37,42 @@ const getUserById = (req, res) => {
 
 // Контроллер для добавления юзера
 const createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
+  const {
+    name = "Жак-Ив Кусто",
+    about = "Исследователь",
+    avatar = "ссылка",
+    email,
+    password,
+  } = req.body;
   console.log(req.body);
-  User.create({ name, about, avatar })
-    .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS_CREATED).send(user))
-    .catch((err) => {
-      if (err.name === "ValidationError") {
-        return res
-          .status(HTTP_STATUS_CODE.BAD_REQUEST)
-          .send({ message: `${ERROR_MESSAGE.BAD_REQUEST} пользователя` });
-      }
+
+  // Хеширование пароля
+  bcrypt.hash(password, 10, (hashError, hashedPassword) => {
+    if (hashError) {
       return res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
-    });
+    }
+
+    return User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hashedPassword,
+    })
+      .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS_CREATED).send(user))
+      .catch((err) => {
+        if (err.name === "ValidationError") {
+          return res
+            .status(HTTP_STATUS_CODE.BAD_REQUEST)
+            .send({ message: `${ERROR_MESSAGE.BAD_REQUEST} пользователя` });
+        }
+        return res
+          .status(HTTP_STATUS_CODE.SERVER_ERROR)
+          .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+      });
+  });
 };
 
 // Контроллер для обновления профиля
