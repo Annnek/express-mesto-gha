@@ -10,7 +10,7 @@ const authMiddleware = (req, res, next) => {
       .json({ message: "Токен не предоставлен" });
   }
 
-  jwt.verify(token, "JWT_SECRET", (err, payload) => {
+  return jwt.verify(token, "JWT_SECRET", (err, payload) => {
     if (err) {
       return res
         .status(HTTP_STATUS_CODE.UNAUTHORIZE)

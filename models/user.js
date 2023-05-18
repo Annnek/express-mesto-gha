@@ -23,9 +23,7 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     validate: {
-      validator: (value) => {
-        return validator.isEmail(value);
-      },
+      validator: (value) => validator.isEmail(value),
       message: "Введите корректный адрес электронной почты",
     },
   },
@@ -33,6 +31,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 8,
+    select: false, // чтобы API не возвращал хеш пароля
   },
 });
 

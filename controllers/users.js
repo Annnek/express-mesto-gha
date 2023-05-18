@@ -36,6 +36,31 @@ const getUserById = (req, res) => {
     });
 };
 
+// Контроллер для получения информации о пользователе
+function getUserInfo(req, res, next) {
+  const { userId } = req.user;
+
+  User.findById(userId)
+    .then((user) => {
+      if (user) {
+        res.send(user);
+      } else {
+        res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
+          message: `${ERROR_MESSAGE.NOT_FOUND} - Пользователь с таким id не найден`,
+        });
+      }
+    })
+    .catch((err) => {
+      if (err.name === "CastError") {
+        res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+          message: `${ERROR_MESSAGE.BAD_REQUEST} - Передан некорректный id`,
+        });
+      } else {
+        next(err);
+      }
+    });
+}
+
 // Контроллер для добавления юзера
 const createUser = (req, res) => {
   const {
@@ -131,7 +156,9 @@ const updateAvatar = (req, res) => {
 
 const login = (req, res) => {
   const { email, password } = req.body;
-  return User.findUserByCredentials(email, password)
+
+  User.findOne({ email })
+    .select("+password")
     .then((user) => {
       if (!user) {
         return res
@@ -139,15 +166,24 @@ const login = (req, res) => {
           .send({ message: ERROR_MESSAGE.UNAUTHORIZED });
       }
 
-      const payload = {
-        _id: user._id,
-      };
+      // Проверка соответствия пароля
+      return bcrypt.compare(password, user.password, (err, isMatch) => {
+        if (err || !isMatch) {
+          return res
+            .status(HTTP_STATUS_CODE.UNAUTHORIZED)
+            .send({ message: ERROR_MESSAGE.UNAUTHORIZED });
+        }
 
-      const token = jwt.sign(payload, "JWT_SECRET", { expiresIn: "7d" });
+        const payload = {
+          _id: user._id,
+        };
 
-      return res.status(HTTP_STATUS_CODE.SUCCESS).send({ token });
+        const token = jwt.sign(payload, "JWT_SECRET", { expiresIn: "7d" });
+
+        return res.status(HTTP_STATUS_CODE.SUCCESS).send({ token });
+      });
     })
-    .catch((err) => {
+    .catch(() => {
       res
         .status(HTTP_STATUS_CODE.SERVER_ERROR)
         .send({ message: ERROR_MESSAGE.SERVER_ERROR });
@@ -157,6 +193,7 @@ const login = (req, res) => {
 module.exports = {
   getUsers,
   getUserById,
+  getUserInfo,
   createUser,
   updateProfile,
   updateAvatar,
