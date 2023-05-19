@@ -17,6 +17,14 @@ app.post("/signin", login);
 app.post("/signup", createUser);
 app.use(routes);
 
+app.use((error, request, response, next) => {
+  const { status = 500, message } = error;
+  response.status(status).send({
+    message: status === 500 ? "На сервере произошла ошибка" : message,
+  });
+  next();
+});
+
 mongoose.connect("mongodb://127.0.0.1:27017/mestodb");
 
 app.listen(PORT, () => {

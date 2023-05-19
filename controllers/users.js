@@ -4,35 +4,32 @@ const User = require("../models/user");
 const { HTTP_STATUS_CODE, ERROR_MESSAGE } = require("../utils/constants");
 
 // Контроллер для получения списка юзеров
-const getUsers = (req, res) => {
+const getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.status(HTTP_STATUS_CODE.SUCCESS).send(users))
-    .catch(() => {
-      res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
-    });
+    .catch(next);
 };
 
-const getUserById = (req, res) => {
+const getUserById = (req, res, next) => {
   const { userId } = req.params;
   User.findById(userId)
     .orFail()
     .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
     .catch((err) => {
       if (err.name === "CastError") {
-        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+        res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
           message: `${ERROR_MESSAGE.BAD_REQUEST}  пользователя при поиске по id`,
         });
-      }
-      if (err.name === "DocumentNotFoundError") {
-        return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
+      } else if (err.name === "DocumentNotFoundError") {
+        res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
           message: `${ERROR_MESSAGE.NOT_FOUND} пользователь с данным id`,
         });
+      } else {
+        res
+          .status(HTTP_STATUS_CODE.SERVER_ERROR)
+          .send({ message: ERROR_MESSAGE.SERVER_ERROR });
       }
-      return res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+      next(err);
     });
 };
 
@@ -62,7 +59,7 @@ function getUserInfo(req, res, next) {
 }
 
 // Контроллер для добавления юзера
-const createUser = (req, res) => {
+const createUser = (req, res, next) => {
   const {
     name = "Жак-Ив Кусто",
     about = "Исследователь",
@@ -75,9 +72,10 @@ const createUser = (req, res) => {
   // Хеширование пароля
   bcrypt.hash(password, 10, (hashError, hashedPassword) => {
     if (hashError) {
-      return res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+      return next({
+        status: HTTP_STATUS_CODE.SERVER_ERROR,
+        message: ERROR_MESSAGE.SERVER_ERROR,
+      });
     }
 
     return User.create({
@@ -90,19 +88,18 @@ const createUser = (req, res) => {
       .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS_CREATED).send(user))
       .catch((err) => {
         if (err.name === "ValidationError") {
-          return res
-            .status(HTTP_STATUS_CODE.BAD_REQUEST)
-            .send({ message: `${ERROR_MESSAGE.BAD_REQUEST} пользователя` });
+          return next({
+            status: HTTP_STATUS_CODE.BAD_REQUEST,
+            message: `${ERROR_MESSAGE.BAD_REQUEST} пользователя`,
+          });
         }
-        return res
-          .status(HTTP_STATUS_CODE.SERVER_ERROR)
-          .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+        return next(err);
       });
   });
 };
 
 // Контроллер для обновления профиля
-const updateProfile = (req, res) => {
+const updateProfile = (req, res, next) => {
   const userId = req.user._id;
   const { name, about } = req.body;
   User.findByIdAndUpdate(
@@ -114,23 +111,23 @@ const updateProfile = (req, res) => {
     .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+        return next({
+          status: HTTP_STATUS_CODE.BAD_REQUEST,
           message: `${ERROR_MESSAGE.BAD_REQUEST} для обновления профиля`,
         });
       }
       if (err.name === "DocumentNotFoundError") {
-        return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
+        return next({
+          status: HTTP_STATUS_CODE.NOT_FOUND,
           message: `${ERROR_MESSAGE.NOT_FOUND} пользователь не найден`,
         });
       }
-      return res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+      return next(err);
     });
 };
 
 // Контроллер для обновления аватара
-const updateAvatar = (req, res) => {
+const updateAvatar = (req, res, next) => {
   const userId = req.user._id;
   const { avatar } = req.body;
   User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true })
@@ -138,40 +135,41 @@ const updateAvatar = (req, res) => {
     .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+        return next({
+          status: HTTP_STATUS_CODE.BAD_REQUEST,
           message: `${ERROR_MESSAGE.BAD_REQUEST} для обновления аватара`,
         });
       }
       if (err.name === "DocumentNotFoundError") {
-        return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
+        return next({
+          status: HTTP_STATUS_CODE.NOT_FOUND,
           message: `${ERROR_MESSAGE.NOT_FOUND} пользователь не найден`,
         });
       }
-
-      return res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+      return next(err);
     });
 };
 
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
 
   User.findOne({ email })
     .select("+password")
     .then((user) => {
       if (!user) {
-        return res
-          .status(HTTP_STATUS_CODE.UNAUTHORIZED)
-          .send({ message: ERROR_MESSAGE.UNAUTHORIZED });
+        return next({
+          status: HTTP_STATUS_CODE.UNAUTHORIZED,
+          message: ERROR_MESSAGE.UNAUTHORIZED,
+        });
       }
 
       // Проверка соответствия пароля
       return bcrypt.compare(password, user.password, (err, isMatch) => {
         if (err || !isMatch) {
-          return res
-            .status(HTTP_STATUS_CODE.UNAUTHORIZED)
-            .send({ message: ERROR_MESSAGE.UNAUTHORIZED });
+          return next({
+            status: HTTP_STATUS_CODE.UNAUTHORIZED,
+            message: ERROR_MESSAGE.UNAUTHORIZED,
+          });
         }
 
         const payload = {
@@ -183,10 +181,8 @@ const login = (req, res) => {
         return res.status(HTTP_STATUS_CODE.SUCCESS).send({ token });
       });
     })
-    .catch(() => {
-      res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+    .catch((err) => {
+      next(err);
     });
 };
 

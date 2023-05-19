@@ -17,6 +17,15 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String,
     required: true,
+    validate: {
+      validator: function validateAvatar(value) {
+        // Регулярное выражение для проверки ссылки на аватар
+        const urlRegex =
+          /^(https?:\/\/)?(www\.)?[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=]+$/;
+        return urlRegex.test(value);
+      },
+      message: "Некорректная ссылка на аватар",
+    },
   },
   email: {
     type: String,
