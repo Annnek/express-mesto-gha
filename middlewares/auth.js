@@ -1,17 +1,18 @@
 const jwt = require("jsonwebtoken");
-const { HTTP_STATUS_CODE, JWT_SECRET } = require("../utils/constants");
+const { JWT_SECRET } = require("../utils/constants");
+const UnauthorizedError = require("../errors/UnauthorizedError");
 
 const authMiddleware = (req, res, next) => {
   const { authorization } = req.headers;
   if (!authorization || !authorization.startsWith("Bearer ")) {
-    return next({ status: HTTP_STATUS_CODE.UNAUTHORIZED });
+    throw new UnauthorizedError("Вы не зарегистрированы");
   }
   const token = authorization.replace("Bearer ", "");
   let payload;
   try {
     payload = jwt.verify(token, JWT_SECRET);
   } catch (err) {
-    return next({ status: HTTP_STATUS_CODE.UNAUTHORIZED });
+    return next(new UnauthorizedError("Вам нужно зарегистрироваться"));
   }
   req.user = payload;
   return next();

@@ -6,7 +6,7 @@ const errorHandler = (error, req, res, next) => {
         ? "На сервере произошла ошибка, попробуйте позже"
         : message,
   });
-  next();
+  next(error);
 };
 
 module.exports = errorHandler;

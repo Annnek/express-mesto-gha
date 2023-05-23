@@ -1,11 +1,11 @@
 const bcrypt = require("bcryptjs"); // Добавляем модуль bcryptjs для хеширования пароля
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
-const {
-  HTTP_STATUS_CODE,
-  ERROR_MESSAGE,
-  JWT_SECRET,
-} = require("../utils/constants");
+const { JWT_SECRET } = require("../utils/constants");
+const BadRequestError = require("../errors/BadRequestError");
+const ConflictError = require("../errors/ConflictError");
+const NotFoundError = require("../errors/NotFoundError");
+const UnauthorizedError = require("../errors/UnauthorizedError");
 
 // Контроллер для регистрации юзера
 function registrationUser(req, res, next) {
@@ -25,7 +25,7 @@ function registrationUser(req, res, next) {
     .then((user) => {
       const { _id } = user;
 
-      return res.status(HTTP_STATUS_CODE.SUCCESS_CREATED).send({
+      return res.status(201).send({
         email,
         name,
         about,
@@ -35,15 +35,15 @@ function registrationUser(req, res, next) {
     })
     .catch((err) => {
       if (err.code === 11000) {
-        next({
-          status: HTTP_STATUS_CODE.CONFLICT_ERR0R,
-          message: ERROR_MESSAGE.CONFLICT_ERR0R,
-        });
+        next(
+          new ConflictError("Пользователь с таким email уже зарегистрирован"),
+        );
       } else if (err.name === "ValidationError") {
-        next({
-          status: HTTP_STATUS_CODE.BAD_REQUEST,
-          message: ERROR_MESSAGE.BAD_REQUEST,
-        });
+        next(
+          new BadRequestError(
+            "Переданы некорректные данные при регистрации пользователя",
+          ),
+        );
       } else {
         next(err);
       }
@@ -63,10 +63,7 @@ function loginUser(req, res, next) {
         return res.send({ _id: token });
       }
 
-      return next({
-        status: HTTP_STATUS_CODE.UNAUTHORIZED,
-        message: ERROR_MESSAGE.UNAUTHORIZED,
-      });
+      throw new UnauthorizedError("Неправильные почта или пароль");
     })
     .catch(next);
 }
@@ -74,7 +71,7 @@ function loginUser(req, res, next) {
 // Контроллер для получения списка юзеров
 const getUsers = (req, res, next) => {
   User.find({})
-    .then((users) => res.status(HTTP_STATUS_CODE.SUCCESS).send(users))
+    .then((users) => res.send(users))
     .catch(next);
 };
 
@@ -82,18 +79,15 @@ const getUsers = (req, res, next) => {
 const getUserById = (req, res, next) => {
   const { userId } = req.params;
   User.findById(userId)
-    .orFail()
-    .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundError("Пользователь с таким id не найден");
+      }
+      res.send({ data: user });
+    })
     .catch((err) => {
       if (err.name === "CastError") {
-        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
-          message: `${ERROR_MESSAGE.BAD_REQUEST}  пользователя при поиске по id`,
-        });
-      }
-      if (err.name === "DocumentNotFoundError") {
-        return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
-          message: `${ERROR_MESSAGE.NOT_FOUND} пользователь с данным id`,
-        });
+        return next(new BadRequestError("Неправильный id"));
       }
       return next(err);
     });
@@ -105,19 +99,12 @@ function getUserInfo(req, res, next) {
 
   User.findById(userId)
     .then((user) => {
-      if (user) {
-        res.send(user);
-      } else {
-        res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
-          message: `${ERROR_MESSAGE.NOT_FOUND} - Пользователь с таким id не найден`,
-        });
-      }
+      if (user) return res.send(user);
+      throw new NotFoundError("Пользователь с таким id не найден");
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
-          message: `${ERROR_MESSAGE.BAD_REQUEST} - Передан некорректный id`,
-        });
+        next(new BadRequestError("Некорректный id"));
       } else {
         next(err);
       }
@@ -133,22 +120,20 @@ const updateProfile = (req, res, next) => {
     { name, about },
     { new: true, runValidators: true },
   )
-    .orFail()
-    .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
+    .then((user) => {
+      if (user) return res.send(user);
+      throw new NotFoundError("Пользователь с таким id не найден");
+    })
     .catch((err) => {
-      if (err.name === "ValidationError") {
-        return next({
-          status: HTTP_STATUS_CODE.BAD_REQUEST,
-          message: `${ERROR_MESSAGE.BAD_REQUEST} для обновления профиля`,
-        });
+      if (err.name === "ValidationError" || err.name === "CastError") {
+        next(
+          new BadRequestError(
+            "Переданы некорректные данные при обновлении профиля пользователя",
+          ),
+        );
+      } else {
+        next(err);
       }
-      if (err.name === "DocumentNotFoundError") {
-        return next({
-          status: HTTP_STATUS_CODE.NOT_FOUND,
-          message: `${ERROR_MESSAGE.NOT_FOUND} пользователь не найден`,
-        });
-      }
-      return next(err);
     });
 };
 
@@ -157,22 +142,20 @@ const updateAvatar = (req, res, next) => {
   const { userId } = req.user;
   const { avatar } = req.body;
   User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true })
-    .orFail()
-    .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
+    .then((user) => {
+      if (user) return res.send(user);
+      throw new NotFoundError("Пользователь с таким id не найден");
+    })
     .catch((err) => {
-      if (err.name === "ValidationError") {
-        return next({
-          status: HTTP_STATUS_CODE.BAD_REQUEST,
-          message: `${ERROR_MESSAGE.BAD_REQUEST} для обновления аватара`,
-        });
+      if (err.name === "ValidationError" || err.name === "CastError") {
+        next(
+          new BadRequestError(
+            "Переданы некорректные данные при обновлении аватара пользователя",
+          ),
+        );
+      } else {
+        next(err);
       }
-      if (err.name === "DocumentNotFoundError") {
-        return next({
-          status: HTTP_STATUS_CODE.NOT_FOUND,
-          message: `${ERROR_MESSAGE.NOT_FOUND} пользователь не найден`,
-        });
-      }
-      return next(err);
     });
 };
 
