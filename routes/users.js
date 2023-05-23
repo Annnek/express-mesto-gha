@@ -35,7 +35,6 @@ const updateAvatarSchema = {
 // Применение валидации перед обработчиками запросов
 router.get("/", getUsers);
 router.get("/me", getUserInfo);
-
 router.get("/:userId", celebrate(getUserByIdSchema), getUserById);
 router.patch("/me", celebrate(updateProfileSchema), updateProfile);
 router.patch("/me/avatar", celebrate(updateAvatarSchema), updateAvatar);
