@@ -1,7 +1,75 @@
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs"); // Добавляем модуль bcryptjs для хеширования пароля
+const jwt = require("jsonwebtoken");
 const User = require("../models/user");
-const { HTTP_STATUS_CODE, ERROR_MESSAGE } = require("../utils/constants");
+const {
+  HTTP_STATUS_CODE,
+  ERROR_MESSAGE,
+  JWT_SECRET,
+} = require("../utils/constants");
+
+// Контроллер для регистрации юзера
+function registrationUser(req, res, next) {
+  const { email, password, name, about, avatar } = req.body;
+
+  bcrypt
+    .hash(password, 10)
+    .then((hash) =>
+      User.create({
+        email,
+        password: hash,
+        name,
+        about,
+        avatar,
+      }),
+    )
+    .then((user) => {
+      const { _id } = user;
+
+      return res.status(HTTP_STATUS_CODE.SUCCESS_CREATED).send({
+        email,
+        name,
+        about,
+        avatar,
+        _id,
+      });
+    })
+    .catch((err) => {
+      if (err.code === 11000) {
+        next({
+          status: HTTP_STATUS_CODE.CONFLICT_ERR0R,
+          message: ERROR_MESSAGE.CONFLICT_ERR0R,
+        });
+      } else if (err.name === "ValidationError") {
+        next({
+          status: HTTP_STATUS_CODE.BAD_REQUEST,
+          message: ERROR_MESSAGE.BAD_REQUEST,
+        });
+      } else {
+        next(err);
+      }
+    });
+}
+
+function loginUser(req, res, next) {
+  const { email, password } = req.body;
+
+  User.findUserByCredentials(email, password)
+    .then(({ _id: userId }) => {
+      if (userId) {
+        const token = jwt.sign({ userId }, JWT_SECRET, {
+          expiresIn: "7d",
+        });
+
+        return res.send({ _id: token });
+      }
+
+      return next({
+        status: HTTP_STATUS_CODE.UNAUTHORIZED,
+        message: ERROR_MESSAGE.UNAUTHORIZED,
+      });
+    })
+    .catch(next);
+}
 
 // Контроллер для получения списка юзеров
 const getUsers = (req, res, next) => {
@@ -10,6 +78,7 @@ const getUsers = (req, res, next) => {
     .catch(next);
 };
 
+// Контроллер для получения юзера по id
 const getUserById = (req, res, next) => {
   const { userId } = req.params;
   User.findById(userId)
@@ -17,19 +86,16 @@ const getUserById = (req, res, next) => {
     .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS).send(user))
     .catch((err) => {
       if (err.name === "CastError") {
-        res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
           message: `${ERROR_MESSAGE.BAD_REQUEST}  пользователя при поиске по id`,
         });
-      } else if (err.name === "DocumentNotFoundError") {
-        res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
+      }
+      if (err.name === "DocumentNotFoundError") {
+        return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
           message: `${ERROR_MESSAGE.NOT_FOUND} пользователь с данным id`,
         });
-      } else {
-        res
-          .status(HTTP_STATUS_CODE.SERVER_ERROR)
-          .send({ message: ERROR_MESSAGE.SERVER_ERROR });
       }
-      next(err);
+      return next(err);
     });
 };
 
@@ -58,49 +124,9 @@ function getUserInfo(req, res, next) {
     });
 }
 
-// Контроллер для добавления юзера
-const createUser = (req, res, next) => {
-  const {
-    name = "Жак-Ив Кусто",
-    about = "Исследователь",
-    avatar = "ссылка",
-    email,
-    password,
-  } = req.body;
-  console.log(req.body);
-
-  // Хеширование пароля
-  bcrypt.hash(password, 10, (hashError, hashedPassword) => {
-    if (hashError) {
-      return next({
-        status: HTTP_STATUS_CODE.SERVER_ERROR,
-        message: ERROR_MESSAGE.SERVER_ERROR,
-      });
-    }
-
-    return User.create({
-      name,
-      about,
-      avatar,
-      email,
-      password: hashedPassword,
-    })
-      .then((user) => res.status(HTTP_STATUS_CODE.SUCCESS_CREATED).send(user))
-      .catch((err) => {
-        if (err.name === "ValidationError") {
-          return next({
-            status: HTTP_STATUS_CODE.BAD_REQUEST,
-            message: `${ERROR_MESSAGE.BAD_REQUEST} пользователя`,
-          });
-        }
-        return next(err);
-      });
-  });
-};
-
 // Контроллер для обновления профиля
 const updateProfile = (req, res, next) => {
-  const userId = req.user._id;
+  const { userId } = req.user;
   const { name, about } = req.body;
   User.findByIdAndUpdate(
     userId,
@@ -128,7 +154,7 @@ const updateProfile = (req, res, next) => {
 
 // Контроллер для обновления аватара
 const updateAvatar = (req, res, next) => {
-  const userId = req.user._id;
+  const { userId } = req.user;
   const { avatar } = req.body;
   User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true })
     .orFail()
@@ -150,48 +176,12 @@ const updateAvatar = (req, res, next) => {
     });
 };
 
-const login = (req, res, next) => {
-  const { email, password } = req.body;
-
-  User.findOne({ email })
-    .select("+password")
-    .then((user) => {
-      if (!user) {
-        return next({
-          status: HTTP_STATUS_CODE.UNAUTHORIZED,
-          message: ERROR_MESSAGE.UNAUTHORIZED,
-        });
-      }
-
-      // Проверка соответствия пароля
-      return bcrypt.compare(password, user.password, (err, isMatch) => {
-        if (err || !isMatch) {
-          return next({
-            status: HTTP_STATUS_CODE.UNAUTHORIZED,
-            message: ERROR_MESSAGE.UNAUTHORIZED,
-          });
-        }
-
-        const payload = {
-          _id: user._id,
-        };
-
-        const token = jwt.sign(payload, "JWT_SECRET", { expiresIn: "7d" });
-
-        return res.status(HTTP_STATUS_CODE.SUCCESS).send({ token });
-      });
-    })
-    .catch((err) => {
-      next(err);
-    });
-};
-
 module.exports = {
+  registrationUser,
+  loginUser,
   getUsers,
   getUserById,
   getUserInfo,
-  createUser,
   updateProfile,
   updateAvatar,
-  login,
 };

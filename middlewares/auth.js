@@ -1,25 +1,20 @@
 const jwt = require("jsonwebtoken");
-const { HTTP_STATUS_CODE } = require("../utils/constants");
+const { HTTP_STATUS_CODE, JWT_SECRET } = require("../utils/constants");
 
 const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization;
-
-  if (!token) {
-    return res
-      .status(HTTP_STATUS_CODE.UNAUTHORIZED)
-      .json({ message: "Токен не предоставлен" });
+  const { authorization } = req.headers;
+  if (!authorization || !authorization.startsWith("Bearer ")) {
+    return next({ status: HTTP_STATUS_CODE.UNAUTHORIZED });
   }
-
-  return jwt.verify(token, "JWT_SECRET", (err, payload) => {
-    if (err) {
-      return res
-        .status(HTTP_STATUS_CODE.UNAUTHORIZE)
-        .json({ message: "Недействительный токен" });
-    }
-
-    req.user = payload;
-    return next();
-  });
+  const token = authorization.replace("Bearer ", "");
+  let payload;
+  try {
+    payload = jwt.verify(token, JWT_SECRET);
+  } catch (err) {
+    return next({ status: HTTP_STATUS_CODE.UNAUTHORIZED });
+  }
+  req.user = payload;
+  return next();
 };
 
 module.exports = authMiddleware;

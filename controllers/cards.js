@@ -1,41 +1,38 @@
 const Card = require("../models/card");
 const { HTTP_STATUS_CODE, ERROR_MESSAGE } = require("../utils/constants");
 
-const getCards = (req, res) => {
+const getCards = (req, res, next) => {
   Card.find({})
     .then((cards) => res.status(HTTP_STATUS_CODE.SUCCESS).send(cards))
-    .catch(() => {
-      res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
-    });
+    .catch(next);
 };
 
-const createCard = (req, res) => {
+const createCard = (req, res, next) => {
   const { name, link } = req.body;
-  const ownerId = req.user._id;
-  console.log(req.user._id); // _id станет доступен
+  const { userId } = req.user;
+  console.log(req.user); // _id станет доступен
 
-  Card.create({ name, link, owner: ownerId })
+  Card.create({ name, link, owner: userId })
     .then((card) => res.status(HTTP_STATUS_CODE.SUCCESS_CREATED).send(card))
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
+        next({
+          status: HTTP_STATUS_CODE.BAD_REQUEST,
           message: `${ERROR_MESSAGE.BAD_REQUEST}  при создании карточки`,
         });
+      } else {
+        next(err);
       }
-
-      return res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
     });
 };
 
-const deleteCard = (req, res) => {
-  const { cardId } = req.params;
+const deleteCard = (req, res, next) => {
+  const { id: cardId } = req.params;
   const { _id: userId } = req.user; // Идентификатор текущего пользователя
 
-  Card.findById(cardId)
+  Card.findById({
+    _id: cardId,
+  })
     .then((card) => {
       if (!card) {
         return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
@@ -44,7 +41,9 @@ const deleteCard = (req, res) => {
       }
 
       // Проверка, что текущий пользователь является владельцем карточки
-      if (card.owner.toString() !== userId) {
+      const { owner: cardOwnerId } = card;
+
+      if (cardOwnerId.valueOf() !== userId) {
         return res.status(HTTP_STATUS_CODE.FORBIDDEN).send({
           message: "Нет доступа для удаления карточки",
         });
@@ -52,77 +51,67 @@ const deleteCard = (req, res) => {
 
       return Card.findByIdAndRemove(cardId);
     })
-    .then((removedCard) => {
-      if (!removedCard) {
+    .then((deletedCard) => {
+      if (!deletedCard) {
         return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
           message: `${ERROR_MESSAGE.NOT_FOUND} карточка не найдена`,
         });
       }
 
-      return res.status(HTTP_STATUS_CODE.SUCCESS).send(removedCard);
+      return res.send({ data: deletedCard });
     })
-    .catch((err) => {
-      if (err.name === "CastError") {
-        res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
-          message: `${ERROR_MESSAGE.BAD_REQUEST} при удалении карточки`,
-        });
-      } else {
-        res.status(HTTP_STATUS_CODE.SERVER_ERROR).send({
-          message: ERROR_MESSAGE.SERVER_ERROR,
-        });
-      }
-    });
+    .catch(next);
 };
 
-const addLikeToCard = (req, res) => {
+const addLikeToCard = (req, res, next) => {
+  const { cardId } = req.params;
+  const { userId } = req.user;
+
   Card.findByIdAndUpdate(
-    req.params.cardId,
-    { $addToSet: { likes: req.user._id } },
+    cardId,
+    { $addToSet: { likes: userId } },
     { new: true },
   )
     .orFail()
-    .then((card) => res.status(HTTP_STATUS_CODE.SUCCESS).send(card))
-    .catch((err) => {
-      if (err.name === "DocumentNotFoundError") {
+    .then((card) => {
+      if (!card) {
         return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
           message: `${ERROR_MESSAGE.NOT_FOUND} Карточка c указанным id не найдена`,
         });
       }
+      return res.send(card);
+    })
+    .catch((err) => {
       if (err.name === "CastError") {
         return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
           message: `${ERROR_MESSAGE.BAD_REQUEST}  для лайка`,
         });
       }
-
-      return res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+      return next(err);
     });
 };
 
-const dislikeCard = (req, res) => {
-  Card.findByIdAndUpdate(
-    req.params.cardId,
-    { $pull: { likes: req.user._id } },
-    { new: true },
-  )
+const dislikeCard = (req, res, next) => {
+  const { cardId } = req.params;
+  const { userId } = req.user;
+
+  Card.findByIdAndUpdate(cardId, { $pull: { likes: userId } }, { new: true })
     .orFail()
-    .then((card) => res.status(HTTP_STATUS_CODE.SUCCESS).send(card))
-    .catch((err) => {
-      if (err.name === "DocumentNotFoundError") {
+    .then((card) => {
+      if (!card) {
         return res.status(HTTP_STATUS_CODE.NOT_FOUND).send({
-          message: `${ERROR_MESSAGE.NOT_FOUND} карточка c указанным id не найдена`,
+          message: `${ERROR_MESSAGE.NOT_FOUND} Карточка c указанным id не найдена`,
         });
       }
+      return res.send(card);
+    })
+    .catch((err) => {
       if (err.name === "CastError") {
         return res.status(HTTP_STATUS_CODE.BAD_REQUEST).send({
-          message: `${ERROR_MESSAGE.BAD_REQUEST}  для удаления лайка`,
+          message: `${ERROR_MESSAGE.BAD_REQUEST} для удаления лайка`,
         });
       }
-
-      return res
-        .status(HTTP_STATUS_CODE.SERVER_ERROR)
-        .send({ message: ERROR_MESSAGE.SERVER_ERROR });
+      return next(err);
     });
 };
 

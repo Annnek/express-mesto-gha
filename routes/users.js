@@ -1,67 +1,43 @@
 const router = require("express").Router();
 const { celebrate, Joi } = require("celebrate");
-const authMiddleware = require("../middlewares/auth");
+const { URL_REGEX } = require("../utils/constants");
 
 const {
   getUsers,
-  getUserById,
   getUserInfo,
-  createUser,
+  getUserById,
   updateProfile,
   updateAvatar,
 } = require("../controllers/users");
 
-// Схема для валидации тела запроса createUser
-const createUserSchema = {
-  body: Joi.object({
-    name: Joi.string().required(),
-    email: Joi.string().email().required(),
-    password: Joi.string().required(),
-  }),
-};
-
 // Схема для валидации параметров запроса getUserById
 const getUserByIdSchema = {
-  params: Joi.object({
-    userId: Joi.string().required(),
+  params: Joi.object().keys({
+    id: Joi.string().length(24).hex().required(),
   }),
 };
 
 // Схема для валидации тела запроса updateProfile
 const updateProfileSchema = {
-  body: Joi.object({
-    name: Joi.string(),
-    about: Joi.string(),
+  body: Joi.object().keys({
+    name: Joi.string().min(2).max(30),
+    about: Joi.string().min(2).max(30),
   }),
 };
 
 // Схема для валидации тела запроса updateAvatar
 const updateAvatarSchema = {
-  body: Joi.object({
-    avatar: Joi.string()
-      .pattern(/^https?:\/\/.*$/)
-      .required(),
+  body: Joi.object().keys({
+    avatar: Joi.string().pattern(URL_REGEX),
   }),
 };
 
 // Применение валидации перед обработчиками запросов
-router.get("/", authMiddleware, getUsers);
-router.get(
-  "/:userId",
-  authMiddleware,
-  celebrate(getUserByIdSchema),
-  getUserById,
-);
-router.get("/me", authMiddleware, getUserInfo);
-router.post("/", celebrate(createUserSchema), createUser);
+router.get("/", getUsers);
+router.get("/me", getUserInfo);
+
+router.get("/:userId", celebrate(getUserByIdSchema), getUserById);
 router.patch("/me", celebrate(updateProfileSchema), updateProfile);
 router.patch("/me/avatar", celebrate(updateAvatarSchema), updateAvatar);
-
-// router.get("/", authMiddleware, getUsers);
-// router.get("/:userId", authMiddleware, getUserById);
-// router.get("/me", authMiddleware, getUserInfo);
-// router.post("/", createUser);
-// router.patch("/me", updateProfile);
-// router.patch("/me/avatar", updateAvatar);
 
 module.exports = router;
