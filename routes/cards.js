@@ -19,7 +19,7 @@ const createCardSchema = {
 
 const deleteCardSchema = {
   params: Joi.object().keys({
-    id: Joi.string().length(24).hex().required(),
+    cardId: Joi.string().length(24).hex().required(),
   }),
 };
 
@@ -31,7 +31,7 @@ const addLikeSchema = {
 
 const dislikeCardSchema = {
   params: Joi.object().keys({
-    id: Joi.string().length(24).hex().required(),
+    cardId: Joi.string().length(24).hex().required(),
   }),
 };
 

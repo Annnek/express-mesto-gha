@@ -30,12 +30,10 @@ const createCard = (req, res, next) => {
 };
 
 const deleteCard = (req, res, next) => {
-  const { id: cardId } = req.params;
+  const { cardId } = req.params;
   const { userId } = req.user; // Идентификатор текущего пользователя
 
-  Card.findById({
-    _id: cardId,
-  })
+  Card.findById(cardId)
     .then((card) => {
       if (!card) {
         throw new NotFoundError("Карточка с данным id не найдена");
