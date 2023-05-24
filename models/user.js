@@ -47,10 +47,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       select: false, // чтобы API не возвращал хеш пароля
-      validate: {
-        validator: ({ length }) => length >= 8,
-        message: "Пароль должен состоять минимум из 6 символов",
-      },
     },
   },
   {
