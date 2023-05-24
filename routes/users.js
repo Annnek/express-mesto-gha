@@ -13,7 +13,7 @@ const {
 // Схема для валидации параметров запроса getUserById
 const getUserByIdSchema = {
   params: Joi.object().keys({
-    id: Joi.string().length(24).hex().required(),
+    userId: Joi.string().length(24).hex().required(),
   }),
 };
 

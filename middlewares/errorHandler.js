@@ -1,8 +1,8 @@
 const errorHandler = (error, req, res, next) => {
-  const { statusCode = 500, message } = error;
-  res.status(statusCode).send({
+  const { status = 500, message } = error;
+  res.status(status).send({
     message:
-      statusCode === 500
+      status === 500
         ? "На сервере произошла ошибка, попробуйте позже"
         : message,
   });
