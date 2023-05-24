@@ -28,13 +28,13 @@ app.use(routes);
 app.use(errors());
 app.use(errorHandler);
 
-app.use((error, req, res, next) => {
-  const { status = 500, message } = error;
-  res.status(status).send({
-    message: status === 500 ? "На сервере произошла ошибка" : message,
-  });
-  next();
-});
+// app.use((error, req, res, next) => {
+//   const { status = 500, message } = error;
+//   res.status(status).send({
+//     message: status === 500 ? "На сервере произошла ошибка" : message,
+//   });
+//   next();
+// });
 
 app.listen(PORT, () => {
   // Если всё работает, консоль покажет, какой порт приложение слушает
